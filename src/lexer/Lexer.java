@@ -111,6 +111,12 @@ public class Lexer {
                             pos++;
                             continue;
                         }
+                    case '!':
+                        if (pos + 1 < len && line.charAt(pos + 1) == '=') {
+                            tokens.add(new Token(Tag.NE, "!=", type[2]));
+                            pos = pos + 2;
+                            continue;
+                        }
                 }
                 if (Character.isDigit(peek)) { // 是整数吗
                     int num = 0;
