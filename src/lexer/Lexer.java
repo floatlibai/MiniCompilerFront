@@ -8,11 +8,14 @@ import java.util.HashMap;
 import java.util.List;
 
 public class Lexer {
+    enum State {
+        STATE_START, STATE_LETTER, STATE_DIGIT, STATE_OPERATOR, STATE_DELIMITER, STATE_ERROR
+    }
+
     HashMap<String, Integer> keywords = new HashMap<>();
-    HashMap<String, Integer> ariOperators = new HashMap<>(); // 算术运算符
-    HashMap<String, Integer> relOperators = new HashMap<>(); // 关系运算符
+    HashMap<String, Integer> operators = new HashMap<>(); // 算术运算符
     HashMap<String, Integer> delimiters = new HashMap<>();
-    HashMap<String, Integer> identifiers = new HashMap<>();
+    HashMap<String, Integer> identifiers = new HashMap<>(); // 暂时充当符号表
     String[] type = {"ERROR", "KEYWORD", "OPERATOR", "DELIMITER", "IDENTIFIER", "NUMBER"};
     List<String> lines = new ArrayList<>();
     public List<Token> tokens = new ArrayList<>(); // token流
@@ -23,17 +26,17 @@ public class Lexer {
         keywords.put("while", Tag.WHILE);
         keywords.put("int", Tag.INT);
         keywords.put("float", Tag.FLOAT);
-        ariOperators.put("+", Tag.PLUS);
-        ariOperators.put("-", Tag.MINUS);
-        ariOperators.put("*", Tag.TIMES);
-        ariOperators.put("/", Tag.OVER);
-        ariOperators.put("=", Tag.ASSIGN);
-        relOperators.put("<", Tag.LT);
-        relOperators.put(">", Tag.GT);
-        relOperators.put("<=", Tag.LE);
-        relOperators.put(">=", Tag.GE);
-        relOperators.put("==", Tag.EQ);
-        relOperators.put("!=", Tag.NE);
+        operators.put("+", Tag.PLUS);
+        operators.put("-", Tag.MINUS);
+        operators.put("*", Tag.TIMES);
+        operators.put("/", Tag.OVER);
+        operators.put("=", Tag.ASSIGN);
+        operators.put("<", Tag.LT);
+        operators.put(">", Tag.GT);
+        operators.put("<=", Tag.LE);
+        operators.put(">=", Tag.GE);
+        operators.put("==", Tag.EQ);
+        operators.put("!=", Tag.NE);
         delimiters.put("(", Tag.LBracket);
         delimiters.put(")", Tag.RBracket);
         delimiters.put(";", Tag.SEMICOLON);
@@ -53,123 +56,129 @@ public class Lexer {
         return keywords.containsKey(word);
     }
 
-    boolean isAriOperator(char ch) {
-        return ariOperators.containsKey(String.valueOf(ch));
+    boolean isOperator(char ch) {
+        return operators.containsKey(String.valueOf(ch));
     }
 
-    boolean isRelOperator(char ch) {
-        return relOperators.containsKey(String.valueOf(ch));
-    }
-
-    boolean isRelOperator(String word) {
-        return relOperators.containsKey(word);
+    boolean isOperator(String word) {
+        return operators.containsKey(word);
     }
 
     boolean isDelimiter(String word) {
         return delimiters.containsKey(word);
     }
 
-    public void scan() {
-        for (int i = 0; i < lines.size(); i++) {
-            String line = lines.get(i);
-            int pos = 0, len = line.length();
-            char peek;
-            while (pos < len) {
-                peek = line.charAt(pos);
-                if (peek == ' ' || peek == '\t') { // 跳过空格或多个空格，行末没有\n，不用处理
-                    pos++;
-                    continue;
-                }
-                switch (peek) { // 处理关系运算符
-                    case '=':
-                        if (pos + 1 < len && line.charAt(pos + 1) == '=') {
-                            tokens.add(new Token(Tag.EQ, "==", type[2]));
-                            pos = pos + 2;
-                            continue;
-                        } else {
-                            tokens.add(new Token(Tag.ASSIGN, "=", type[2]));
-                            pos++;
-                            continue;
-                        }
-                    case '<':
-                        if (pos + 1 < len && line.charAt(pos + 1) == '=') {
-                            tokens.add(new Token(Tag.LE, "<=", type[2]));
-                            pos = pos + 2;
-                            continue;
-                        } else {
-                            tokens.add(new Token(Tag.LT, "<", type[2]));
-                            pos++;
-                            continue;
-                        }
-                    case '>':
-                        if (pos + 1 < len && line.charAt(pos + 1) == '=') {
-                            tokens.add(new Token(Tag.EQ, ">=", type[2]));
-                            pos = pos + 2;
-                            continue;
-                        } else {
-                            tokens.add(new Token(Tag.ASSIGN, ">", type[2]));
-                            pos++;
-                            continue;
-                        }
-                    case '!':
-                        if (pos + 1 < len && line.charAt(pos + 1) == '=') {
-                            tokens.add(new Token(Tag.NE, "!=", type[2]));
-                            pos = pos + 2;
-                            continue;
-                        }
-                }
-                if (Character.isDigit(peek)) { // 是整数吗
-                    int num = 0;
-                    while (true) {
-                        num = 10 * num + Character.digit(peek, 10);
-                        if (pos + 1 < len && Character.isDigit(line.charAt(pos + 1))) {
-                            pos++;
-                            peek = line.charAt(pos);
-                        } else {
-                            pos++;
-                            break;
-                        }
-                    }
-                    tokens.add(new Token(Tag.INT, String.valueOf(num), type[5]));
-                    continue;
-                }
-                if (Character.isLetter(peek) || peek == '_') {
-                    StringBuilder sb = new StringBuilder();
-                    while (true) {
+    public void scanAll() {
+        for (String line : lines) {
+            scanLine(line);
+        }
+    }
+
+    void scanLine(String line) {
+        int pos = 0, len = line.length();
+        State currentState = State.STATE_START;
+        StringBuilder sb = new StringBuilder();
+        while (pos < len) {
+            char peek = line.charAt(pos);
+            switch (currentState) {
+                case STATE_START:
+                    if (peek == ' ' || peek == '\t') {
+                        pos++;
+                    } else if (Character.isLetter(peek) || peek == '_') {
+                        currentState = State.STATE_LETTER;
                         sb.append(peek);
-                        if (pos + 1 < len && (Character.isLetter(line.charAt(pos + 1)) || line.charAt(pos + 1) == '_')) {
-                            pos++;
-                            peek = line.charAt(pos);
-                        } else {
-                            pos++;
-                            break;
-                        }
-                    }
-                    if (isKeyword(sb.toString())) { // 是关键字吗
-                        tokens.add(new Token(keywords.get(sb.toString()), sb.toString(), type[1]));
+                        pos++;
+                    } else if (Character.isDigit(peek)) {
+                        currentState = State.STATE_DIGIT;
+                        sb.append(peek);
+                        pos++;
+                    } else if (isOperator(peek) || peek == '!') {
+                        currentState = State.STATE_OPERATOR;
+                        sb.append(peek);
+                        pos++;
+                    } else if (isDelimiter(String.valueOf(peek))) {
+                        currentState = State.STATE_DELIMITER;
+                        sb.append(peek);
+                        pos++;
                     } else {
-                        if (identifiers.containsKey(sb.toString())) { // 是已经存在的标识符吗
-                            tokens.add(new Token(Tag.ID, sb.toString(), type[4]));
-                        } else {
-                            identifiers.put(sb.toString(), Tag.ID);
-                            tokens.add(new Token(Tag.ID, sb.toString(), type[4]));
-                        }
+                        processToken(String.valueOf(peek), State.STATE_ERROR);
+                        pos++;
                     }
-                    continue;
-                }
-                if (isAriOperator(line.charAt(pos))) {
-                    tokens.add(new Token(ariOperators.get(String.valueOf(line.charAt(pos))), String.valueOf(line.charAt(pos)), type[2]));
-                    pos++;
-                    continue;
-                }
-                if (isDelimiter(String.valueOf(line.charAt(pos)))) {
-                    tokens.add(new Token(delimiters.get(String.valueOf(line.charAt(pos))), String.valueOf(line.charAt(pos)), type[3]));
-                    pos++;
-                    continue;
-                }
-                tokens.add(new Token(Tag.ERROR, String.valueOf(i + 1), type[0]));
-                pos++;
+                    break;
+                case STATE_LETTER:
+                    if (Character.isLetter(peek) || peek == '_') {
+                        sb.append(peek);
+                        pos++;
+                    } else { // 该词法中标识符中不能有数字
+                        processToken(sb.toString(), currentState);
+                        sb.setLength(0);
+                        currentState = State.STATE_START;
+                    }
+                    break;
+                case STATE_DIGIT:
+                    if (Character.isDigit(peek)) {
+                        sb.append(peek);
+                        pos++;
+                    } else {
+                        processToken(sb.toString(), currentState);
+                        sb.setLength(0);
+                        currentState = State.STATE_START;
+                    }
+                    break;
+                case STATE_OPERATOR:
+                    if (isOperator(sb.toString() + peek)) {
+                        processToken(sb.toString() + peek, currentState);
+                        sb.setLength(0);
+                        currentState = State.STATE_START;
+                        pos++;
+                    } else {
+                        if (sb.charAt(0) == '!') {
+                            processToken("!", State.STATE_ERROR);
+                        } else {
+                            processToken(sb.toString(), currentState);
+                        }
+                        sb.setLength(0);
+                        currentState = State.STATE_START;
+                    }
+                    break;
+                case STATE_DELIMITER:
+                    processToken(sb.toString(), currentState);
+                    sb.setLength(0);
+                    currentState = State.STATE_START;
+                    break;
             }
+        }
+        if (currentState != State.STATE_START) {
+            processToken(sb.toString(), currentState);
+        }
+    }
+
+    void processToken(String tokenValue, State state) {
+        switch (state) {
+            case STATE_LETTER:
+                if (isKeyword(tokenValue)) { // 是关键字吗
+                    tokens.add(new Token(keywords.get(tokenValue), tokenValue, type[1]));
+                } else {
+                    if (identifiers.containsKey(tokenValue)) { // 是已经存在的标识符吗
+                        tokens.add(new Token(Tag.ID, tokenValue, type[4]));
+                    } else {
+                        identifiers.put(tokenValue, Tag.ID);
+                        tokens.add(new Token(Tag.ID, tokenValue, type[4]));
+                    }
+                }
+                break;
+            case STATE_DIGIT:
+                tokens.add(new Token(Tag.INT, tokenValue, type[5]));
+                break;
+            case STATE_OPERATOR:
+                tokens.add(new Token(operators.get(tokenValue), tokenValue, type[2]));
+                break;
+            case STATE_DELIMITER:
+                tokens.add(new Token(delimiters.get(tokenValue), tokenValue, type[3]));
+                break;
+            case STATE_ERROR:
+                tokens.add(new Token(Tag.ERROR, tokenValue, type[0]));
+                break;
         }
     }
 }
