@@ -12,10 +12,10 @@ public class Lexer {
         STATE_START, STATE_LETTER, STATE_DIGIT, STATE_OPERATOR, STATE_DELIMITER, STATE_ERROR
     }
 
-    HashMap<String, Integer> keywords = new HashMap<>();
-    HashMap<String, Integer> operators = new HashMap<>(); // 算术运算符
-    HashMap<String, Integer> delimiters = new HashMap<>();
-    HashMap<String, Integer> identifiers = new HashMap<>(); // 暂时充当符号表
+    HashMap<String, Tag> keywords = new HashMap<>();
+    HashMap<String, Tag> operators = new HashMap<>(); // 算术运算符
+    HashMap<String, Tag> delimiters = new HashMap<>();
+    HashMap<String, Tag> identifiers = new HashMap<>(); // 暂时充当符号表
     String[] type = {"ERROR", "KEYWORD", "OPERATOR", "DELIMITER", "IDENTIFIER", "NUMBER"};
     List<String> lines = new ArrayList<>();
     public List<Token> tokens = new ArrayList<>(); // token流
