@@ -9,7 +9,8 @@ import java.util.List;
 
 public class Lexer {
     HashMap<String, Integer> keywords = new HashMap<>();
-    HashMap<String, Integer> operators = new HashMap<>();
+    HashMap<String, Integer> ariOperators = new HashMap<>(); // 算术运算符
+    HashMap<String, Integer> relOperators = new HashMap<>(); // 关系运算符
     HashMap<String, Integer> delimiters = new HashMap<>();
     HashMap<String, Integer> identifiers = new HashMap<>();
     String[] type = {"ERROR", "KEYWORD", "OPERATOR", "DELIMITER", "IDENTIFIER", "NUMBER"};
@@ -22,17 +23,17 @@ public class Lexer {
         keywords.put("while", Tag.WHILE);
         keywords.put("int", Tag.INT);
         keywords.put("float", Tag.FLOAT);
-        operators.put("+", Tag.PLUS);
-        operators.put("-", Tag.MINUS);
-        operators.put("*", Tag.TIMES);
-        operators.put("/", Tag.OVER);
-        operators.put("=", Tag.ASSIGN);
-        operators.put("<", Tag.LT);
-        operators.put(">", Tag.GT);
-        operators.put("<=", Tag.LE);
-        operators.put(">=", Tag.GE);
-        operators.put("==", Tag.EQ);
-        operators.put("!=", Tag.NE);
+        ariOperators.put("+", Tag.PLUS);
+        ariOperators.put("-", Tag.MINUS);
+        ariOperators.put("*", Tag.TIMES);
+        ariOperators.put("/", Tag.OVER);
+        ariOperators.put("=", Tag.ASSIGN);
+        relOperators.put("<", Tag.LT);
+        relOperators.put(">", Tag.GT);
+        relOperators.put("<=", Tag.LE);
+        relOperators.put(">=", Tag.GE);
+        relOperators.put("==", Tag.EQ);
+        relOperators.put("!=", Tag.NE);
         delimiters.put("(", Tag.LBracket);
         delimiters.put(")", Tag.RBracket);
         delimiters.put(";", Tag.SEMICOLON);
@@ -52,12 +53,16 @@ public class Lexer {
         return keywords.containsKey(word);
     }
 
-    boolean isOperator(char ch) {
-        return operators.containsKey(String.valueOf(ch));
+    boolean isAriOperator(char ch) {
+        return ariOperators.containsKey(String.valueOf(ch));
     }
 
-    boolean isOperator(String word) {
-        return operators.containsKey(word);
+    boolean isRelOperator(char ch) {
+        return relOperators.containsKey(String.valueOf(ch));
+    }
+
+    boolean isRelOperator(String word) {
+        return relOperators.containsKey(word);
     }
 
     boolean isDelimiter(String word) {
@@ -75,7 +80,7 @@ public class Lexer {
                     pos++;
                     continue;
                 }
-                switch (peek) { // 处理一部分运算符，!=单独处理，因为!不是运算符
+                switch (peek) { // 处理关系运算符
                     case '=':
                         if (pos + 1 < len && line.charAt(pos + 1) == '=') {
                             tokens.add(new Token(Tag.EQ, "==", type[2]));
@@ -146,8 +151,8 @@ public class Lexer {
                     }
                     continue;
                 }
-                if (isOperator(String.valueOf(line.charAt(pos)))) {
-                    tokens.add(new Token(operators.get(String.valueOf(line.charAt(pos))), String.valueOf(line.charAt(pos)), type[2]));
+                if (isAriOperator(line.charAt(pos))) {
+                    tokens.add(new Token(ariOperators.get(String.valueOf(line.charAt(pos))), String.valueOf(line.charAt(pos)), type[2]));
                     pos++;
                     continue;
                 }
