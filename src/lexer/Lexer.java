@@ -2,6 +2,7 @@ package lexer;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -176,5 +177,16 @@ public class Lexer {
                 tokens.add(new Token(Tag.ERROR, tokenValue, type[0]));
                 break;
         }
+    }
+
+    public void run(String filename) throws IOException {
+        readFile("input.txt");
+        scanAll();
+        String outputFilePath = "token.txt";
+        FileWriter writer = new FileWriter(outputFilePath);
+        for (Token t : tokens) {
+            writer.write(t.toString() + "\n");
+        }
+        writer.close();
     }
 }

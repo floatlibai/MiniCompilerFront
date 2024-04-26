@@ -4,6 +4,7 @@ out/
 !**/src/test/**/out/
 input.txt
 output.txt
+token.txt
 
 ### Eclipse ###
 .apt_generated
