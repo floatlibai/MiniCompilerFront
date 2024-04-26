@@ -56,10 +56,6 @@ public class Lexer {
         return keywords.containsKey(word);
     }
 
-    boolean isOperator(char ch) {
-        return operators.containsKey(String.valueOf(ch));
-    }
-
     boolean isOperator(String word) {
         return operators.containsKey(word);
     }
@@ -92,7 +88,7 @@ public class Lexer {
                         currentState = State.STATE_DIGIT;
                         sb.append(peek);
                         pos++;
-                    } else if (isOperator(peek) || peek == '!') {
+                    } else if (isOperator(String.valueOf(peek)) || peek == '!') {
                         currentState = State.STATE_OPERATOR;
                         sb.append(peek);
                         pos++;
@@ -168,7 +164,7 @@ public class Lexer {
                 }
                 break;
             case STATE_DIGIT:
-                tokens.add(new Token(Tag.INT, tokenValue, type[5]));
+                tokens.add(new Token(Tag.NUMBER, tokenValue, type[5]));
                 break;
             case STATE_OPERATOR:
                 tokens.add(new Token(operators.get(tokenValue), tokenValue, type[2]));

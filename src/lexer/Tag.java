@@ -5,5 +5,5 @@ public enum Tag {
     PLUS, MINUS, TIMES, OVER, ASSIGN,
     LT, GT, LE, GE, EQ, NE,
     LBracket, RBracket, SEMICOLON, Quotation,
-    ID, ERROR
+    ID, NUMBER, ERROR
 }
