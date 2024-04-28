@@ -1,25 +1,25 @@
 package parser;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 public class ItemSet { // 项目集
     List<Item> items = new ArrayList<>();
 
-    public void addItem(String prod) { // 添加项目，约定产生式合法
-        int arrowIndex = prod.indexOf("->");
-        for(int i=0;i<prod.length();i++) { // 分离提取终结符和非终结符
-            char c = prod.charAt(i);
-            if(Character.isUpperCase(c)) {
-                Parser.nonTerminal.add(c);
-            } else if (i>=arrowIndex+2 && c!='|' && c!='ε') {
-                Parser.terminal.add(c);
+    public void addProd(String prod) { // 约定产生式的格式为 "A -> a B c | b"
+        String[] part1 = prod.split(" -> ");
+        String[] part2 = part1[1].split("\\|");
+        Parser.nonTerminal.add(part1[0].trim());
+        for(String a : part2) {
+            String[] part3 = a.split(" ");
+            List<String> list = new ArrayList<>();
+            for(String b:part3){
+                String c = b.trim();
+                if(c.length()==1 && Character.isUpperCase(c.charAt(0)))
+                    Parser.nonTerminal.add(c);
+                else Parser.terminal.add(c);
+                list.add(c);
             }
-        }
-        for(String s : prod.substring(arrowIndex+2).split("\\|")) {
-            items.add(new Item(prod.charAt(0), s));
+            items.add(new Item(part1[0].trim(),list));
         }
     }
 
