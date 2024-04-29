@@ -4,9 +4,7 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 
 public class Lexer {
     enum State {
@@ -17,9 +15,10 @@ public class Lexer {
     HashMap<String, Tag> operators = new HashMap<>(); // 算术运算符
     HashMap<String, Tag> delimiters = new HashMap<>();
     HashMap<String, Tag> identifiers = new HashMap<>(); // 暂时充当符号表
-    String[] type = {"ERROR", "KEYWORD", "OPERATOR", "DELIMITER", "IDENTIFIER", "NUMBER"};
+    String[] type = {"ERROR", "KEYWORD", "OPERATOR", "DELIMITER", "IDENTIFIER", "NUMBER", "END"};
     List<String> lines = new ArrayList<>();
     public List<Token> tokens = new ArrayList<>(); // token流
+    public Queue<Token> tokenQueue = new LinkedList<>();
 
     public Lexer() {
         keywords.put("if", Tag.IF);
@@ -179,8 +178,17 @@ public class Lexer {
         }
     }
 
-    public void run(String filename) throws IOException {
-        readFile("input.txt");
+    public void outputTokenQueue() {
+        Queue<Token> queue = new LinkedList<>(tokenQueue);
+        System.out.print("tokenQueue: ");
+        while (!queue.isEmpty()) {
+            System.out.print(queue.poll().value+" ");
+        }
+        System.out.println();
+    }
+
+    public void run() throws IOException {
+        readFile("lexical.txt");
         scanAll();
         String outputFilePath = "token.txt";
         FileWriter writer = new FileWriter(outputFilePath);
@@ -188,5 +196,10 @@ public class Lexer {
             writer.write(t.toString() + "\n");
         }
         writer.close();
+
+        for(Token t : tokens) {
+            tokenQueue.offer(t);
+        }
+        tokenQueue.offer(new Token(Tag.END, "$", type[6]));
     }
 }

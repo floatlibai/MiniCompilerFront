@@ -2,9 +2,10 @@
 out/
 !**/src/main/**/out/
 !**/src/test/**/out/
-input.txt
-output.txt
+lexical.txt
+grammer.txt
 token.txt
+table.csv
 
 ### Eclipse ###
 .apt_generated
