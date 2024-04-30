@@ -11,6 +11,7 @@ public class ItemSet { // 项目集
         String[] part1 = prod.split(" -> ");
         String[] part2 = part1[1].split(" \\| ");
         Parser.nonTerminal.add(part1[0]);
+        Parser.symbols.add(part1[0]);
         for (String a : part2) {
             String[] part3 = a.split(" ");
             List<String> list = new ArrayList<>();
@@ -18,6 +19,7 @@ public class ItemSet { // 项目集
                 if (b.length() == 1 && Character.isUpperCase(b.charAt(0)))
                     Parser.nonTerminal.add(b);
                 else Parser.terminal.add(b);
+                Parser.symbols.add(b);
                 list.add(b);
             }
             items.add(new Item(part1[0].trim(), list));

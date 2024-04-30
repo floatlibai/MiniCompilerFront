@@ -45,7 +45,7 @@ public class Item { // 单个项目
         if (this == obj) return true;
         if (obj == null || getClass() != obj.getClass()) return false;
         Item item = (Item) obj;
-        return Objects.equals(left, item.left) && Objects.equals(right, item.right) && pos == item.pos && ahead == item.ahead;
+        return Objects.equals(left, item.left) && Objects.equals(right, item.right) && pos == item.pos && Objects.equals(ahead, item.ahead);
     }
 
 }
