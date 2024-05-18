@@ -261,7 +261,7 @@ public class Parser {
             }
             writer.flush();
             writer.close();
-            System.out.println("LR分析表已成功导出到 " + filePath);
+//            System.out.println("LR分析表已成功导出到 " + filePath);
         } catch (Exception e) {
             System.err.println("导出LR分析表时出错：" + e.getMessage());
         }
@@ -305,9 +305,9 @@ public class Parser {
     public void parser() {
         boolean accepted = false;
         while (!accepted) {
-            outputStatusStack(); // 输出状态栈
-            outputSymbolStack(); // 输出符号栈
-            lexer.outputTokenQueue(); // 输出token流
+//            outputStatusStack(); // 输出状态栈
+//            outputSymbolStack(); // 输出符号栈
+//            lexer.outputTokenQueue(); // 输出token流
 
             // 获得 栈顶状态 和 输入token 的配对
             Token token = lexer.tokenQueue.peek();
@@ -378,13 +378,13 @@ public class Parser {
 
                     case 10: // C -> E > E
                         symbolStack.peekLast().trueList = Analyzer.makeList(Analyzer.nextInstr());
-                        symbolStack.peekLast().falseList = Analyzer.makeList(Analyzer.nextInstr()+1);
+                        symbolStack.peekLast().falseList = Analyzer.makeList(Analyzer.nextInstr() + 1);
                         Analyzer.gen("if " + nodes.get(0).lexeme + ">" + nodes.get(2).lexeme + " goto ");
                         Analyzer.gen("goto ");
                         break;
                     case 11: // C -> E < E
                         symbolStack.peekLast().trueList = Analyzer.makeList(Analyzer.nextInstr());
-                        symbolStack.peekLast().falseList = Analyzer.makeList(Analyzer.nextInstr()+1);
+                        symbolStack.peekLast().falseList = Analyzer.makeList(Analyzer.nextInstr() + 1);
                         Analyzer.gen("if " + nodes.get(0).lexeme + "<" + nodes.get(2).lexeme + " goto ");
                         Analyzer.gen("goto ");
                         break;
@@ -408,21 +408,21 @@ public class Parser {
                         symbolStack.peekLast().lexeme = nodes.get(0).lexeme;
                         break;
                     case 3: // L -> int
-                        symbolStack.peekLast().lexeme=nodes.get(0).lexeme;
+                        symbolStack.peekLast().lexeme = nodes.get(0).lexeme;
                         break;
                     case 4: // L -> float
-                        symbolStack.peekLast().lexeme=nodes.get(0).lexeme;
+                        symbolStack.peekLast().lexeme = nodes.get(0).lexeme;
                         break;
 
                     case 14: // E -> E - T
-                        symbolStack.peekLast().lexeme= nodes.get(0).lexeme + "-" + nodes.get(2).lexeme;
+                        symbolStack.peekLast().lexeme = nodes.get(0).lexeme + "-" + nodes.get(2).lexeme;
                         break;
                     case 13: // E -> E + T
-                        symbolStack.peekLast().lexeme= nodes.get(0).lexeme + "+" + nodes.get(2).lexeme;
+                        symbolStack.peekLast().lexeme = nodes.get(0).lexeme + "+" + nodes.get(2).lexeme;
                         break;
 
                     case 5: // S -> id = E ;
-                        Analyzer.gen(nodes.get(0).lexeme+"="+nodes.get(2).lexeme);
+                        Analyzer.gen(nodes.get(0).lexeme + "=" + nodes.get(2).lexeme);
                         break;
                     case 1: // D -> L id ; D
 //                        Analyzer.gen(nodes.get(0).lexeme+" "+nodes.get(1).lexeme);
@@ -436,8 +436,9 @@ public class Parser {
                 accepted = true;
             }
         }
+        System.out.println("================语法分析结果===============");
         if (!accepted)
-            System.out.println("Error!");
-        else System.out.println("Accept!");
+            System.out.println("Error! 语法分析失败!");
+        else System.out.println("Accept! 语法分析成功!");
     }
 }

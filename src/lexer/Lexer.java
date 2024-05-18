@@ -52,6 +52,15 @@ public class Lexer {
         br.close();
     }
 
+    public void readFromConsole() throws IOException {
+        Scanner scanner = new Scanner(System.in);
+        String tmp;
+        while (!(tmp = scanner.nextLine()).equals("exit")) {
+            lines.add(tmp);
+        }
+        scanner.close();
+    }
+
     boolean isKeyword(String word) {
         return keywords.containsKey(word);
     }
@@ -188,12 +197,25 @@ public class Lexer {
     }
 
     public void run() throws IOException {
-        readFile("lexical.txt");
+//        readFile("lexical.txt");
+        System.out.println("Please enter lines of text (type 'exit' to finish):");
+        readFromConsole();
+
         scanAll();
         String outputFilePath = "token.txt";
         FileWriter writer = new FileWriter(outputFilePath);
+        System.out.println("================Token序列=================");
         for (Token t : tokens) {
             writer.write(t.toString() + "\n");
+            if(Objects.equals(t.type, "IDENTIFIER")) {
+                System.out.println("token: "+"( identifier, "+t.value+" )");
+            } else if(Objects.equals(t.type, "KEYWORD")) {
+                System.out.println("token: "+"( keyword, "+t.value+" )");
+            } else if(Objects.equals(t.type, "OPERATOR") || Objects.equals(t.type, "DELIMITER")) {
+                System.out.println("token: "+"( operator, "+t.value+" )");
+            } else if(Objects.equals(t.type, "NUMBER")){
+                System.out.println("token: "+"( digits, "+t.value+" )");
+            }
         }
         writer.close();
 
