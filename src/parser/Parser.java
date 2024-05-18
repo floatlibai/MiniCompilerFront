@@ -4,6 +4,8 @@ import javafx.util.Pair;
 import lexer.Lexer;
 import lexer.Tag;
 import lexer.Token;
+import semantic.Analyzer;
+import semantic.Node;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -17,11 +19,8 @@ public class Parser {
     static Set<String> symbols = new HashSet<>();
     Set<String> emptyNonTerminal = new HashSet<>(); // 非终结符能否推出空串
     ItemSet prodSet = new ItemSet(); // 产生式的集合
-    Map<String, Set<String>> FIRST = new HashMap<>(); // FIRST集
     List<ItemSet> C = new ArrayList<>(); // 项目集族
     Map<Pair<Integer, String>, Integer> GOTO = new HashMap<>(); // GOTO表
-    Set<String> visited = new HashSet<>(); // 广搜闭包的visited数组
-    Queue<Item> closureQueue = new LinkedList<>(); // 待搜索加入闭包的符号队列
 
     enum State {
         SHIFT, REDUCE, ACCEPT, ERROR
@@ -31,27 +30,23 @@ public class Parser {
     Map<Pair<Integer, String>, Pair<State, Integer>> ACTION = new HashMap<>(); // Action表
 
     Deque<Integer> statusStack = new ArrayDeque<>(); // 状态栈
-    Deque<String> symbolStack = new ArrayDeque<>(); // 符号栈
+    Deque<Node> symbolStack = new ArrayDeque<>(); // 符号栈
     Lexer lexer = new Lexer();
 
     public void init() throws IOException {
         lexer.run();
-
         readFile();
         for (Item p : prodSet.items) {
             if (Objects.equals(p.right.get(0), "ε")) {
                 emptyNonTerminal.add(p.left);
             }
         }
-        setFirst();
-        outputFIRST();
-        outputSymbol();
         buildTable();
         outputTable();
         statusStack.push(0);
-        symbolStack.push("$");
-
+        symbolStack.push(new Node("$"));
         parser();
+//        outputC();
     }
 
     public void readFile() throws IOException {
@@ -61,60 +56,59 @@ public class Parser {
         while ((tmp = br.readLine()) != null) {
             prodSet.addProd(tmp);
         }
-        prodSet.items.add(0, new Item("@", Collections.singletonList(prodSet.items.get(0).left))); // 增广文法
-        nonTerminal.add("@");
+//        prodSet.items.add(0, new Item("@", Collections.singletonList(prodSet.items.get(0).left))); // 增广文法
+//        nonTerminal.add("@");
         terminal.add("$");
         br.close();
     }
 
-    public void setFirst() {
-        for (Item p : prodSet.items) {
-            if (!FIRST.containsKey(p.left)) getFirst(p.left);
-        }
-    }
 
-    Set<String> getFirst(String n) { // 递归获得非终结符n的FIRST集
-        if (FIRST.get(n) != null) { // 计算过
-            return FIRST.get(n);
-        }
-        // 获得左侧为n的所有产生式
-        Set<Item> nProds = getRightSet(n);
-        // 处理左侧为n的所有产生式
+    Set<String> first(List<String> strList) { // 动态获取first集
         Set<String> firstSet = new HashSet<>();
-        for (Item p : nProds) {
-            String c = p.right.get(0); // 获得该产生式右侧第一个符号
-            if (terminal.contains(c)) { // 终结符
-                firstSet.add(c);
+        if (strList.isEmpty()) {
+            firstSet.add("ε"); // @ = ε
+            return firstSet;
+        } else if (strList.size() == 1) {
+            if (terminal.contains(strList.get(0)) || Objects.equals(strList.get(0), "$")) { // # = $
+                // 终结符
+                firstSet.add(strList.get(0));
+                return firstSet;
             } else { // 非终结符
-                int pos = 0;
-                boolean toEmpty;
-                do {
-                    c = p.right.get(pos++);
-                    toEmpty = emptyNonTerminal.contains(c);
-                    if (!Objects.equals(c, n)) { // 避免直接左递归
-                        Set<String> set = new HashSet<>(getFirst(c));
-                        if (pos < p.right.size()) set.remove("ε"); // 修改引用有隐患
-                        firstSet.addAll(set);
+                // 获得左侧为第一个非终结符的所有产生式 X ->
+                Set<Item> Prods = getRightSet(strList.get(0));
+                for (Item p : Prods) {
+                    int pos = p.findLeft();
+                    if (pos != -1) { // X -> aXb
+                        if (pos == 0) continue; // X -> Xb
+                        else { // X -> aXb
+                            List<String> a = p.right.subList(0, pos);
+                            Set<String> set = first(a);
+                            if (set.size() == 1 && set.contains("ε")) continue;
+                        }
                     }
-                } while (pos < p.right.size() && toEmpty);
-
+                    Set<String> set = new HashSet<>(first(p.right));
+                    firstSet.addAll(set);
+                }
+                return firstSet;
             }
+        } else { // first(X1X2X3)，逐个求first(Xi)
+            for (int i = 0; i < strList.size(); i++) {
+                List<String> temp = new ArrayList<>();
+                temp.add(strList.get(i)); // 获得单个元素
+                Set<String> set = first(temp);
+                if (set.contains("ε") && i != strList.size() - 1) {
+                    set.remove("ε");
+                    firstSet.addAll(set);
+                } else { // 无"ε"或最后一个了
+                    firstSet.addAll(set);
+                    break;
+                }
+            }
+            return firstSet;
         }
-        FIRST.put(n, firstSet);
-        return firstSet;
     }
 
-    void outputFIRST() {
-        for (Map.Entry<String, Set<String>> e : FIRST.entrySet()) {
-            System.out.print(e.getKey() + ": ");
-            for (String c : e.getValue()) {
-                System.out.print(c + " ");
-            }
-            System.out.println();
-        }
-    }
-
-    ItemSet Closure(ItemSet I) {
+    public ItemSet Closure(ItemSet I) {
         for (int i = 0; i < I.items.size(); i++) {
             Item item = I.items.get(i); // 遍历每一个项目
             if (item.pos == -1 || item.pos == item.right.size()) continue; //找不到或归约态
@@ -125,23 +119,10 @@ public class Parser {
             }
             // 待约态，找到c的所有产生式
             Set<Item> set = getRightSet(c);
-            for (Item it : set) { // 遍历每个产生式，找展望符
-                Set<String> aheads = new HashSet<>(); // 展望符集
-                if (item.pos == item.right.size() - 1) // B是最后一个符号
-                    aheads.add(item.ahead); // 继承
-                else {
-                    String c2 = item.right.get(item.pos + 1);
-                    if (terminal.contains(c2)) // β为终结符
-                        aheads.add(c2);
-                    else {
-                        aheads.addAll(FIRST.get(c2));
-                        if (emptyNonTerminal.contains(c2)) {
-                            aheads.add(item.ahead);
-                        }
-                        aheads.remove("ε"); // 尝试将空串加入展望符中
-                    }
-                }
-//                if(emptyNonTerminal.contains(c)) aheads.add("$");
+            List<String> b = new ArrayList<>(item.right.subList(item.pos + 1, item.right.size()));
+            b.add(item.ahead);
+            Set<String> aheads = new HashSet<>(first(b)); // 展望符集
+            for (Item it : set) { // 遍历每个产生式和展望符的组合
                 for (String ahead : aheads) {
                     Item newItem = new Item(it.left, it.right, 0, ahead);
                     if (Objects.equals(newItem.right.get(0), "ε")) newItem.pos++;
@@ -170,6 +151,7 @@ public class Parser {
 
     void items() { // 为文法构造LR(1)项集族
         ItemSet I0 = new ItemSet();
+        I0.seg = 0;
         I0.items.add(new Item(prodSet.items.get(0).left, prodSet.items.get(0).right, 0, "$"));
         C.add(Closure(I0));
         boolean newAdded = true;
@@ -177,34 +159,23 @@ public class Parser {
             newAdded = false;
             for (int i = 0; i < C.size(); i++) { // C的每一个项集
                 ItemSet I = C.get(i);
-                for (String x : nonTerminal) { // 每个文法符号x，非终结符
+                for (String x : symbols) { // 每个文法符号x，非终结符
                     ItemSet J = Goto(I, x);
-                    if (!J.items.isEmpty() && !C.contains(J)) {
-                        C.add(J);
-                        newAdded = true; // 设置标志，表示有新的项目集加入C中
-                        GOTO.put(new Pair<>(i, x), C.size() - 1);
-                    } else if (!J.items.isEmpty() && C.contains(J)) {
-                        for (int k = 0; k < C.size(); k++) {
+                    if (!J.items.isEmpty()) {
+                        int k = 0;
+                        for (; k < C.size(); k++) {
                             if (Objects.equals(C.get(k), J)) {
-                                GOTO.put(new Pair<>(i, x), k); // 构造GOTO表
                                 break;
                             }
                         }
-                    }
-                }
-                for (String x : terminal) { // 每个文法符号x，终结符
-                    if (x.equals("ε")) continue;
-                    ItemSet J = Goto(I, x);
-                    if (!J.items.isEmpty() && !C.contains(J)) {
-                        C.add(J);
-                        newAdded = true; // 设置标志，表示有新的项目集加入C中
-                        GOTO.put(new Pair<>(i, x), C.size() - 1);
-                    } else if (!J.items.isEmpty() && C.contains(J)) {
-                        for (int k = 0; k < C.size(); k++) {
-                            if (Objects.equals(C.get(k), J)) {
-                                GOTO.put(new Pair<>(i, x), k);
-                                break;
-                            }
+                        if (k != C.size()) { // 找到
+                            GOTO.put(new Pair<>(i, x), k);
+                        } else { // 没找到
+                            J.seg = C.size();
+                            J.from = I.seg;
+                            C.add(J);
+                            newAdded = true; // 设置标志，表示有新的项目集加入C中
+                            GOTO.put(new Pair<>(i, x), C.size() - 1);
                         }
                     }
                 }
@@ -220,12 +191,12 @@ public class Parser {
                 Item it = I.items.get(j);
                 if (it.pos < it.right.size()) { //不是归约态，记住pos的定义
                     String next = it.right.get(it.pos);
-                    if (terminal.contains(next)) { // 终结符
+                    if (terminal.contains(next) && GOTO.containsKey(new Pair<>(i, next))) { // 终结符
                         int jump = GOTO.get(new Pair<>(i, next)); // 从GOTO表中拿出要转移到的的状态
                         ACTION.put(new Pair<>(i, next), new Pair<>(State.SHIFT, jump));
                     } // 非终结符建GOTO表已经在items中实现了
                 } else { // 归约态
-                    if (!Objects.equals(it.left, "@")) {
+                    if (!Objects.equals(it.left, "P")) {
                         ACTION.put(new Pair<>(i, it.ahead), new Pair<>(State.REDUCE, prodSet.findProd(it)));
                     } else {
                         ACTION.put(new Pair<>(i, "$"), new Pair<>(State.ACCEPT, -1));
@@ -254,13 +225,15 @@ public class Parser {
         System.out.println();
     }
 
-    void outputTable() {
+    void outputC() {
         for (int i = 0; i < C.size(); i++) {
             System.out.println("==========================");
             System.out.println("State " + i);
             outputClosure(C.get(i));
         }
+    }
 
+    void outputTable() {
         String filePath = "table.csv";
         try {
             FileWriter writer = new FileWriter(filePath);
@@ -270,7 +243,7 @@ public class Parser {
             }
             writer.append("#,");
             for (String symbol : nonTerminal) { // GOTO表表头
-                if (Objects.equals(symbol, "@")) continue;
+                if (Objects.equals(symbol, "P")) continue;
                 writer.append(symbol).append(",");
             }
             writer.append("\n");
@@ -281,7 +254,7 @@ public class Parser {
                 }
                 writer.append("#,");
                 for (String symbol : nonTerminal) {
-                    if (Objects.equals(symbol, "@")) continue;
+                    if (Objects.equals(symbol, "P")) continue;
                     writer.append(String.valueOf(GOTO.get(new Pair<>(i, symbol)))).append(",");
                 }
                 writer.append("\n");
@@ -295,6 +268,8 @@ public class Parser {
     }
 
     void outputClosure(ItemSet I) {
+        System.out.println("seg: " + I.seg);
+        System.out.println("from: " + I.from);
         for (Item i : I.items) {
             System.out.println(i);
         }
@@ -319,10 +294,10 @@ public class Parser {
     }
 
     public void outputSymbolStack() {
-        Deque<String> stack = new ArrayDeque<>(symbolStack);
+        Deque<Node> stack = new ArrayDeque<>(symbolStack);
         System.out.print("symbolStack: ");
         while (!stack.isEmpty()) {
-            System.out.print(stack.pollFirst() + " ");
+            System.out.print(stack.pollFirst().symbol + " ");
         }
         System.out.println();
     }
@@ -348,36 +323,115 @@ public class Parser {
                 break;
             }
 
-//            if (token != null) {
-//                p = new Pair<>(statusStack.peekLast(), token.value);
-//            } else break;
-
-            System.out.println(p.getKey() + "," + p.getValue());
+//            System.out.println(p.getKey() + "," + p.getValue());
             Pair<State, Integer> action = ACTION.get(p);
-            System.out.println(action.getKey() + "," + action.getValue());
-            if (action.getKey() == State.ERROR)
+//            System.out.println(action.getKey() + "," + action.getValue());
+            if (action.getKey() == State.ERROR) // 出错
                 break;
             else if (action.getKey() == State.SHIFT) { // 移入
                 statusStack.addLast(action.getValue());
-                symbolStack.addLast(p.getValue());
+                symbolStack.addLast(new Node(token));
                 lexer.tokenQueue.poll();
             } else if (action.getKey() == State.REDUCE) { // 归约
                 Item prod = prodSet.items.get(action.getValue()); // 获得用于归约的产生式
-                System.out.println(prod);
-                if (Objects.equals(prod.right.get(0), "ε")) { // 对于空串的归约
-//                    symbolStack.addLast(prod.left);
-//                    continue;
-                }
-                else {
+                List<Node> nodes = new ArrayList<>();
+                if (!Objects.equals(prod.right.get(0), "ε")) {
                     for (int i = 0; i < prod.right.size(); i++) {
                         statusStack.pollLast();
-                        symbolStack.pollLast();
+                        nodes.add(0, symbolStack.pollLast());
                     }
                 }
-                symbolStack.addLast(prod.left);
-                if (GOTO.get(new Pair<>(statusStack.peekLast(), symbolStack.peekLast())) != null) {
-                    statusStack.addLast(GOTO.get(new Pair<>(statusStack.peekLast(), symbolStack.peekLast())));
+                symbolStack.addLast(new Node(prod.left)); // 空集直接进栈，不出栈
+                if (GOTO.get(new Pair<>(statusStack.peekLast(), symbolStack.peekLast().symbol)) != null) {
+                    statusStack.addLast(GOTO.get(new Pair<>(statusStack.peekLast(), symbolStack.peekLast().symbol)));
                 }
+
+                // 规约完成，根据用于规约的产生式触发语义动作
+                switch (action.getValue()) {
+                    case 6: // S -> if ( C ) M S
+                        Analyzer.backPatch(nodes.get(2).trueList, nodes.get(4).instr);
+                        symbolStack.peekLast().nextList = Analyzer.merge(nodes.get(2).falseList, nodes.get(5).nextList);
+                        break;
+                    case 7: // S -> if ( C ) M S N else M S
+                        Analyzer.backPatch(nodes.get(2).trueList, nodes.get(4).instr);
+                        Analyzer.backPatch(nodes.get(2).falseList, nodes.get(8).instr);
+                        Set<Integer> temp = Analyzer.merge(nodes.get(5).nextList, nodes.get(6).nextList);
+                        symbolStack.peekLast().nextList = Analyzer.merge(temp, nodes.get(9).nextList);
+                        break;
+                    case 8: // S -> while M ( C ) M S
+                        Analyzer.backPatch(nodes.get(6).nextList, nodes.get(1).instr);
+                        Analyzer.backPatch(nodes.get(3).trueList, nodes.get(5).instr);
+                        symbolStack.peekLast().nextList = nodes.get(3).falseList;
+                        Analyzer.gen("goto " + nodes.get(1).instr);
+                        break;
+                    case 9: // S -> S M S
+                        Analyzer.backPatch(nodes.get(0).nextList, nodes.get(1).instr);
+                        symbolStack.peekLast().nextList = nodes.get(2).nextList;
+                        break;
+                    case 22: // M -> ε
+                        symbolStack.peekLast().instr = Analyzer.nextInstr();
+                        break;
+                    case 23: // N -> ε
+                        symbolStack.peekLast().nextList = Analyzer.makeList(Analyzer.nextInstr());
+                        Analyzer.gen("goto ");
+                        break;
+
+                    case 10: // C -> E > E
+                        symbolStack.peekLast().trueList = Analyzer.makeList(Analyzer.nextInstr());
+                        symbolStack.peekLast().falseList = Analyzer.makeList(Analyzer.nextInstr()+1);
+                        Analyzer.gen("if " + nodes.get(0).lexeme + ">" + nodes.get(2).lexeme + " goto ");
+                        Analyzer.gen("goto ");
+                        break;
+                    case 11: // C -> E < E
+                        symbolStack.peekLast().trueList = Analyzer.makeList(Analyzer.nextInstr());
+                        symbolStack.peekLast().falseList = Analyzer.makeList(Analyzer.nextInstr()+1);
+                        Analyzer.gen("if " + nodes.get(0).lexeme + "<" + nodes.get(2).lexeme + " goto ");
+                        Analyzer.gen("goto ");
+                        break;
+                    case 12: // C -> E == E
+                        symbolStack.peekLast().trueList = Analyzer.makeList(Analyzer.nextInstr());
+                        symbolStack.peekLast().falseList = Analyzer.makeList(Analyzer.nextInstr() + 1);
+                        Analyzer.gen("if " + nodes.get(0).lexeme + "==" + nodes.get(2).lexeme + " goto ");
+                        Analyzer.gen("goto ");
+                        break;
+
+                    case 20: // F -> id 字面量综合属性丢上去
+                        symbolStack.peekLast().lexeme = nodes.get(0).lexeme;
+                        break;
+                    case 21: // F -> digits
+                        symbolStack.peekLast().lexeme = nodes.get(0).lexeme;
+                        break;
+                    case 16: // T -> F
+                        symbolStack.peekLast().lexeme = nodes.get(0).lexeme;
+                        break;
+                    case 15: // E -> T
+                        symbolStack.peekLast().lexeme = nodes.get(0).lexeme;
+                        break;
+                    case 3: // L -> int
+                        symbolStack.peekLast().lexeme=nodes.get(0).lexeme;
+                        break;
+                    case 4: // L -> float
+                        symbolStack.peekLast().lexeme=nodes.get(0).lexeme;
+                        break;
+
+                    case 14: // E -> E - T
+                        symbolStack.peekLast().lexeme= nodes.get(0).lexeme + "-" + nodes.get(2).lexeme;
+                        break;
+                    case 13: // E -> E + T
+                        symbolStack.peekLast().lexeme= nodes.get(0).lexeme + "+" + nodes.get(2).lexeme;
+                        break;
+
+                    case 5: // S -> id = E ;
+                        Analyzer.gen(nodes.get(0).lexeme+"="+nodes.get(2).lexeme);
+                        break;
+                    case 1: // D -> L id ; D
+//                        Analyzer.gen(nodes.get(0).lexeme+" "+nodes.get(1).lexeme);
+                        Analyzer.symTable.put(nodes.get(1).lexeme, nodes.get(0).lexeme);
+
+                    default:
+                        break;
+                }
+
             } else if (action.getKey() == State.ACCEPT) {
                 accepted = true;
             }

@@ -1,14 +1,16 @@
 P -> D S
-D -> L id ; D | ε
-L -> int | float
-S -> id = E
-S -> if ( C ) S
-S -> if ( C ) S else S
-S -> while ( C ) S
-S -> S ; S | ε
+D -> L id ; D
+D -> ε
+L -> int
+L -> float
+S -> id = E ;
+S -> if ( C ) M S
+S -> if ( C ) M S N else M S
+S -> while M ( C ) M S
+S -> S M S
 C -> E > E
 C -> E < E
-C -> E = = E
+C -> E == E
 E -> E + T
 E -> E - T
 E -> T
@@ -18,3 +20,5 @@ T -> T / F
 F -> ( E )
 F -> id
 F -> digits
+M -> ε
+N -> ε

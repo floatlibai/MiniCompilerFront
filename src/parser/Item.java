@@ -1,7 +1,6 @@
 package parser;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
@@ -10,12 +9,6 @@ public class Item { // 单个项目
     List<String> right = new ArrayList<>(); // 右侧文法符号集合
     int pos = -1; // 点的位置
     String ahead; // 展望符
-
-    public Item(String prod) { // 约定产生式的格式为 "A -> a B c"
-        String[] s = prod.split(" ");
-        this.left = s[0];
-        this.right.addAll(Arrays.asList(s).subList(2, s.length));
-    }
 
     public Item(String left, List<String> right) {
         this.left = left;
@@ -27,6 +20,15 @@ public class Item { // 单个项目
         this.right = right;
         this.pos = pos;
         this.ahead = ahead;
+    }
+
+    public int findLeft() { // 在右侧找左侧非终结符
+        for(int i=0;i<right.size();i++) {
+            if(Objects.equals(left, right.get(i))) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     public String toString() {
