@@ -1,5 +1,7 @@
 package lexer;
 
+import semantic.Analyzer;
+
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -168,6 +170,7 @@ public class Lexer {
                         tokens.add(new Token(Tag.ID, tokenValue, type[4]));
                     } else {
                         identifiers.put(tokenValue, Tag.ID);
+                        Analyzer.symTable.put(tokenValue,"");
                         tokens.add(new Token(Tag.ID, tokenValue, type[4]));
                     }
                 }
@@ -211,15 +214,17 @@ public class Lexer {
                 System.out.println("token: "+"( identifier, "+t.value+" )");
             } else if(Objects.equals(t.type, "KEYWORD")) {
                 System.out.println("token: "+"( keyword, "+t.value+" )");
-            } else if(Objects.equals(t.type, "OPERATOR") || Objects.equals(t.type, "DELIMITER")) {
+            } else if(Objects.equals(t.type, "OPERATOR")) {
                 System.out.println("token: "+"( operator, "+t.value+" )");
+            } else if (Objects.equals(t.type, "DELIMITER")) {
+                System.out.println("token: "+"( delimiter, "+t.value+" )");
             } else if(Objects.equals(t.type, "NUMBER")){
                 System.out.println("token: "+"( digits, "+t.value+" )");
             }
         }
         writer.close();
 
-        for(Token t : tokens) {
+        for(Token t : tokens) { // 创建Token队列供语法分析使用
             tokenQueue.offer(t);
         }
         tokenQueue.offer(new Token(Tag.END, "$", type[6]));

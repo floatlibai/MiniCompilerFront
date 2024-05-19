@@ -4,7 +4,7 @@ import java.util.*;
 
 public class Analyzer {
     public static List<String> instructions = new ArrayList<>(); // 生成的指令集合
-    public static Map<String,String> symTable = new HashMap<>(); // 符号表 <id_name, int or float>
+    public static Map<String,String> symTable = new TreeMap<>(); // 符号表 <id_name, int or float>
     public static Set<Integer> makeList(int i) { // 创建一个只包含i的列表
         Set<Integer> set = new HashSet<>();
         set.add(i);
@@ -39,6 +39,8 @@ public class Analyzer {
 
     public static void outputSymbolTable() {
         System.out.println("================符号表=====================");
-        System.out.println(symTable);
+        for(Map.Entry<String,String> entry:symTable.entrySet()) {
+            System.out.println("( "+entry.getValue()+", "+entry.getKey()+" )");
+        }
     }
 }

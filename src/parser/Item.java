@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-public class Item { // 单个项目
+public class Item { // 单个项目，或产生式
     String left; // 左侧非终结符，约定为大写字母
     List<String> right = new ArrayList<>(); // 右侧文法符号集合
     int pos = -1; // 点的位置
@@ -23,8 +23,8 @@ public class Item { // 单个项目
     }
 
     public int findLeft() { // 在右侧找左侧非终结符
-        for(int i=0;i<right.size();i++) {
-            if(Objects.equals(left, right.get(i))) {
+        for (int i = 0; i < right.size(); i++) {
+            if (Objects.equals(left, right.get(i))) {
                 return i;
             }
         }
@@ -34,8 +34,8 @@ public class Item { // 单个项目
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append(left).append(" -> ");
-        for(int i=0;i<right.size();i++) {
-            if(i==pos) sb.append(".");
+        for (int i = 0; i < right.size(); i++) {
+            if (i == pos) sb.append(".");
             sb.append(right.get(i));
         }
         sb.append(", ").append(ahead);
@@ -49,5 +49,4 @@ public class Item { // 单个项目
         Item item = (Item) obj;
         return Objects.equals(left, item.left) && Objects.equals(right, item.right) && pos == item.pos && Objects.equals(ahead, item.ahead);
     }
-
 }

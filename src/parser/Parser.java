@@ -33,7 +33,7 @@ public class Parser {
     Deque<Node> symbolStack = new ArrayDeque<>(); // 符号栈
     Lexer lexer = new Lexer();
 
-    public void init() throws IOException {
+    public void run() throws IOException {
         lexer.run();
         readFile();
         for (Item p : prodSet.items) {
@@ -66,10 +66,10 @@ public class Parser {
     Set<String> first(List<String> strList) { // 动态获取first集
         Set<String> firstSet = new HashSet<>();
         if (strList.isEmpty()) {
-            firstSet.add("ε"); // @ = ε
+            firstSet.add("ε");
             return firstSet;
         } else if (strList.size() == 1) {
-            if (terminal.contains(strList.get(0)) || Objects.equals(strList.get(0), "$")) { // # = $
+            if (terminal.contains(strList.get(0)) || Objects.equals(strList.get(0), "$")) {
                 // 终结符
                 firstSet.add(strList.get(0));
                 return firstSet;
@@ -434,6 +434,8 @@ public class Parser {
 
             } else if (action.getKey() == State.ACCEPT) {
                 accepted = true;
+                // 回填最后一条 goto, pay attention!
+                Analyzer.backPatch(symbolStack.peekLast().nextList, Analyzer.nextInstr());
             }
         }
         System.out.println("================语法分析结果===============");

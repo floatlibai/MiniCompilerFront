@@ -41,5 +41,4 @@ public class ItemSet { // 项目集
         ItemSet itemSet = (ItemSet) obj;
         return items.equals(itemSet.items);
     }
-
 }
